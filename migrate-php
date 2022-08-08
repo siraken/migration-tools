@@ -65,7 +65,7 @@ if (!empty($migration_files)) {
     $stmt = $pdo->prepare($sql);
   
     try
-    { 
+    {
       if ($stmt->execute()) {
         echo success_message("Migrated: " . "$file\n\n");
         $success_count++;
