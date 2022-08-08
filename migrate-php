@@ -64,10 +64,18 @@ if (!empty($migration_files)) {
     $sql = file_get_contents($file);
     $stmt = $pdo->prepare($sql);
   
-    if ($stmt->execute()) {
-      echo success_message("Migrated: " . "$file\n\n");
-      $success_count++;
-    } else {
+    try
+    { 
+      if ($stmt->execute()) {
+        echo success_message("Migrated: " . "$file\n\n");
+        $success_count++;
+      } else {
+        // For PHP <= 7.4x
+        throw new PDOException();
+      }
+    }
+    catch (PDOException $e)
+    {
       $error = $stmt->errorInfo();
       echo error_message("Error(" . $error[1] . "): ") . $error[2] . "\n-> " . error_message("$file\n\n");
       $error_count++;
