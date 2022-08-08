@@ -1,0 +1,148 @@
+#!/usr/bin/env ruby
+require "optparse"
+
+opt = OptionParser.new
+
+# Default value
+DATABASE_TYPE = "mysql"
+options = {
+  :host => "localhost",
+  :port => "3306",
+  :name => "example",
+  :encoding => "utf8mb4",
+  :username => "root",
+  :password => "root"
+}
+
+opt.on('-t VALUE', '--type', 'Database type (default: mysql)') { |v| DATABASE_TYPE = v }
+opt.on('-H VALUE', '--host', 'Hostname (default: localhost)') { |v| options[:host] = v }
+opt.on('-P VALUE', '--port', 'Port (default: 3306)') { |v| options[:port] = v }
+opt.on('-n VALUE', '--name', 'Database name (default: example)') { |v| options[:name] = v }
+opt.on('-e VALUE', '--encoding', 'Encoding (default: utf8mb4)') { |v| options[:encoding] = v }
+opt.on('-u VALUE', '--username', 'Username (default: root)') { |v| options[:username] = v }
+opt.on('-p VALUE', '--password', 'Password (default: root)') { |v| options[:password] = v }
+opt.on('-h', '--help', 'Show this help') { puts opt; exit }
+opt.parse!()
+
+puts "\n#{options}\n\n"
+
+# success message
+def success_message(str)
+  print "\e[32m#{str}\e[0m"
+end
+
+# error message
+def error_message(str)
+  print "\e[31m#{str}\e[0m"
+end
+
+# Get migration files
+def get_migration_files()
+  files = []
+  Dir.glob("./migrations/*.sql") do | file |
+    files.push(file)
+  end
+  return files
+end
+
+# Result
+def show_result(success_count, error_count)
+  success_message("Success: #{success_count}\n")
+  error_message("Failed: #{error_count}\n")
+  puts "\nDone."
+end
+
+# MySQL
+def on_mysql(options, files)
+  require "mysql2"
+  puts "MySQL / MariaDB"
+
+  begin
+    conn = Mysql2::Client.new(
+      host: options[:host],
+      port: options[:port],
+      username: options[:username],
+      password: options[:password],
+      database: options[:name],
+      encoding: options[:encoding]
+    )
+    success_message("Database connection success.\n\n")
+
+    success_count = 0
+    error_count = 0
+
+    files.each do | file |
+      begin
+        conn.query(File.read(file))
+        success_message("Migrated: #{file}\n\n")
+        success_count += 1
+      rescue => e
+        error_message("#{e.message}\n")
+        error_message("-> #{file}\n\n")
+        error_count += 1
+      end
+    end
+
+    conn.close
+
+    show_result(success_count, error_count)
+  rescue => e
+    error_message("Error: #{e.message}\n")
+  end
+  
+end
+
+# PostgreSQL
+def on_postgres(options, files)
+  require "pg"
+  puts "PostgreSQL"
+
+  begin
+    conn = PG::Connection.new(
+      host: options[:host],
+      port: options[:port],
+      user: options[:username],
+      password: options[:password],
+      dbname: options[:name]
+    )
+    success_message("Database connection success.\n\n")
+
+    success_count = 0
+    error_count = 0
+
+    files.each do | file |
+      begin
+        conn.exec_params(File.read(file))
+        success_message("Migrated: #{file}\n\n")
+        success_count += 1
+      rescue => e
+        error_message(e.message)
+        error_message("-> #{file}\n\n")
+        error_count += 1
+      end
+    end
+
+    conn.close
+
+    show_result(success_count, error_count)
+  rescue => e
+    error_message("Error: #{e.message}\n")
+  end
+  
+end
+
+files = get_migration_files()
+
+if !files
+  error_message("No migration files found.\n")
+  exit
+end
+
+case DATABASE_TYPE
+when "mysql", "mariadb" then
+  on_mysql(options, files)
+when "pg", "pgsql", "postgres" then
+  on_postgres(options, files)
+else
+  error_message("Error: This database is not supported.\n")
+end
