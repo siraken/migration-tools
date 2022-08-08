@@ -1,0 +1,82 @@
+#!/usr/bin/env php
+<?php
+function success_message($string)
+{
+  return "\033[0;32m$string\033[0m";
+}
+function error_message($string)
+{
+  return "\033[0;31m$string\033[0m";
+}
+function get_pdo($dsn, $username, $password, $driver_options)
+{
+  try
+  {
+    $pdo_object = new PDO($dsn, $username, $password, $driver_options);
+    echo success_message("Database connection success.") . "\n\n";
+    return $pdo_object;
+  }
+  catch (PDOException $e)
+  {
+    exit(error_message("Database connection error: ") . $e->getMessage() . "\n");
+  }
+}
+
+array_shift($argv);
+
+$options = getopt("H:P:n:t:c:u:p:");
+
+if (empty($options)) {
+  $usage = <<< STRING
+  Usage: migrate -H {hostname} -P {port} -n {db_name} -t {db_type} -c {charset}
+
+  [Options]
+    -H  Hostname (default: localhost)
+    -P  Port (default: 3306)
+    -n  Database name (default: example)
+    -t  Database type (default: mysql)
+    -c  Charset (default: utf8)
+    -u  Username (default: root)
+    -p  Password (default: root)
+  STRING;
+  print("$usage\n");
+  exit();
+}
+
+$db_type = empty($options["t"]) ? "mysql" : $options["t"];
+$host = empty($options["H"]) ? "localhost" : $options["H"];
+$port = empty($options["P"]) ? "3306" : $options["P"];
+$db_name = empty($options["n"]) ? "example" : $options["n"];
+$charset = empty($options["c"]) ? "utf8" : $options["c"];
+
+$dsn = "$db_type:host=$host;port=$port;dbname=$db_name;charset=$charset";
+
+$db_user = empty($options["u"]) ? "root" : $options["u"];
+$db_pass = empty($options["p"]) ? "root" : $options["p"];
+
+$pdo = get_pdo($dsn, $db_user, $db_pass, []);
+
+$migration_files = glob('migrations/*.sql');
+if (!empty($migration_files)) {
+  $success_count = 0;
+  $error_count = 0;
+  foreach ($migration_files as $file) {
+    $sql = file_get_contents($file);
+    $stmt = $pdo->prepare($sql);
+  
+    if ($stmt->execute()) {
+      echo success_message("Migrated: " . "$file\n\n");
+      $success_count++;
+    } else {
+      $error = $stmt->errorInfo();
+      echo error_message("Error(" . $error[1] . "): ") . $error[2] . "\n-> " . error_message("$file\n\n");
+      $error_count++;
+    }
+  }
+
+  echo success_message("Success: $success_count\n");
+  echo error_message("Failed: $error_count\n");
+  echo "\nDone.\n";
+} else {
+  exit("\033[0;31mError: \033[0mNo migration files found.\n");
+}

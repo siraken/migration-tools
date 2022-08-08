@@ -1,0 +1,83 @@
+#!/usr/bin/env python
+from argparse import ArgumentParser
+import os
+import MySQLdb
+
+folder_name = "./migrations"
+
+def success_message(message):
+    print("\033[32m{}\033[0m".format(message))
+
+def error_message(message):
+    print("\033[31m{}\033[0m".format(message))
+
+def get_options():
+    parser = ArgumentParser()
+    parser.add_argument("-H", "--host", default="localhost", help="Hostname")
+    parser.add_argument("-P", "--port", default=3306, help="Port")
+    parser.add_argument("-n", "--name", default="example", help="Database name")
+    parser.add_argument("-t", "--type", default="mysql", help="Database type")
+    parser.add_argument("-c", "--charset", default="utf8", help="Charset")
+    parser.add_argument("-u", "--user", default="root", help="Username")
+    parser.add_argument("-p", "--password", default="root", help="Password")
+    return parser.parse_args()
+
+def get_connection(options):
+    try:
+        return MySQLdb.connect(
+            host=options.host,
+            port=options.port,
+            user=options.user,
+            passwd=options.password,
+            db=options.name,
+            charset=options.charset
+        )
+    except Exception as e:
+        error_message(f"Connection Error: {e}")
+        exit(1)
+
+def get_migration_files():
+    files = [f for f in os.listdir(folder_name) if f.endswith(".sql")]
+
+    if not files:
+        error_message("No migration files found")
+        exit(1)
+
+    return files
+
+if __name__ == "__main__":
+    options = get_options()
+
+    success_count = 0
+    error_count = 0
+    
+    files = get_migration_files()
+
+    try:
+        connection = get_connection(options)
+        success_message("Database connection success.\n")
+        cursor = connection.cursor()
+
+        filename = ""
+
+        for filename in files:
+            with open(f"{folder_name}/{filename}", "r") as f:
+                try:
+                    sql = f.read()
+                    cursor.execute(sql)
+                    success_count += 1
+                    success_message(f"Migrated: {filename}\n")
+                except Exception as e:
+                    error_message(f"Error: {e}")
+                    error_message(f"-> {folder_name}/{filename}\n")
+                    error_count += 1
+
+        connection.close()
+
+    except Exception as e:
+        error_message(f"Error: {e}")
+    finally:
+        success_message(f"Success: {success_count}")
+        error_message(f"Failed: {error_count}")
+        print("\nDone.")
+        exit(0)
