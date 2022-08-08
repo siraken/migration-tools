@@ -43,16 +43,20 @@ if (empty($options)) {
   exit();
 }
 
-$db_type = empty($options["t"]) ? "mysql" : $options["t"];
-$host = empty($options["H"]) ? "localhost" : $options["H"];
-$port = empty($options["P"]) ? "3306" : $options["P"];
-$db_name = empty($options["n"]) ? "example" : $options["n"];
-$charset = empty($options["c"]) ? "utf8" : $options["c"];
+$db_type = !isset($options["t"]) ? "mysql" : $options["t"];
+$host = !isset($options["H"]) ? "localhost" : $options["H"];
+$port = !isset($options["P"]) ? "3306" : $options["P"];
+$db_name = !isset($options["n"]) ? "example" : $options["n"];
+$charset = !isset($options["c"]) ? "utf8" : $options["c"];
 
-$dsn = "$db_type:host=$host;port=$port;dbname=$db_name;charset=$charset";
+if ($db_type === "pgsql") {
+  $dsn = "$db_type:host=$host;port=$port;dbname=$db_name";
+} else {
+  $dsn = "$db_type:host=$host;port=$port;dbname=$db_name;charset=$charset";
+}
 
-$db_user = empty($options["u"]) ? "root" : $options["u"];
-$db_pass = empty($options["p"]) ? "root" : $options["p"];
+$db_user = !isset($options["u"]) ? "root" : $options["u"];
+$db_pass = !isset($options["p"]) ? "root" : $options["p"];
 
 $pdo = get_pdo($dsn, $db_user, $db_pass, []);
 
