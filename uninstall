@@ -1,0 +1,22 @@
+#!/bin/bash
+
+INSTALL_TYPE=$1
+INSTALL_DIR="/usr/local/bin"
+
+case $1 in
+  "php")
+    echo "Uninstalling PHP"
+    sudo rm $INSTALL_DIR/migrate-php
+    ;;
+  "python")
+    echo "Uninstalling Python"
+    sudo rm $INSTALL_DIR/migrate-python
+    ;;
+  "ruby")
+    echo "Uninstalling Ruby"
+    sudo rm $INSTALL_DIR/migrate-ruby
+    ;;
+  *)
+    echo "Usage: ./uninstall [php|python|ruby]"
+    ;;
+esac
