@@ -1,0 +1,22 @@
+#!/bin/bash
+
+INSTALL_TYPE=$1
+INSTALL_DIR="/usr/local/bin"
+
+case $1 in
+  "php")
+    echo "Installing PHP"
+    sudo cp migrate-php $INSTALL_DIR
+    ;;
+  "python")
+    echo "Installing Python"
+    sudo cp migrate-python $INSTALL_DIR
+    ;;
+  "ruby")
+    echo "Installing Ruby"
+    sudo cp migrate-ruby $INSTALL_DIR
+    ;;
+  *)
+    echo "Usage: ./install [php|python|ruby]"
+    ;;
+esac
